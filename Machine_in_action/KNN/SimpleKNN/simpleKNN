@@ -1,0 +1,7 @@
+from kNN import *
+
+group, labels = createDataSet()
+
+testData = [0.2, 0.6]
+labels = KNNClassify(testData, group, labels, 3)
+print(labels)
