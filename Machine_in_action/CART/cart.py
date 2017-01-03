@@ -12,17 +12,15 @@ def loadDataSet(fileName):
         linestr = line.strip().split()
         fltLine = map(float, linestr)
         dataMat.append(fltLine)
-    return dataMat
+    return array(dataMat)
 
 # 三个参数：数据集合，待切分的特征和该特征的某个值。
 # 将数据切分得到两个子集并返回
 
 
 def binSplitDataSet(dataSet, feature, value):
-    dataSet = mat(eye(4))
     mat0 = dataSet[nonzero(dataSet[:, feature] > value)[0], :]
     mat1 = dataSet[nonzero(dataSet[:, feature] <= value)[0], :]
-    print mat1
     return mat0, mat1
 
 # 叶子节点创建函数，数据最后一列为要预测的数值。直接取均值作为最后的预测结果
@@ -63,7 +61,7 @@ def chooseBestSplit(dataSet, leafType=regLeaf, errType=regErr, ops=(1, 4)):
     tols = ops[0]
     tolN = ops[1]
     # 如果所有值相等则退出
-    if len(set(dataSet[:, -1].T.tolist())) == 1:
+    if len(set(dataSet[:, 1].T.tolist())) == 1:
         return None, leafType(dataSet)  # 默认的选取策略为当前集合的均值
     m, n = shape(dataSet)
     S = errType(dataSet)
@@ -79,7 +77,7 @@ def chooseBestSplit(dataSet, leafType=regLeaf, errType=regErr, ops=(1, 4)):
             if (err0 + err1) < bestS:bestS = err0 + err1;bestIndex = i;bestValue = splitvalue
     if (S - bestValue) < tols:return None, leafType(dataSet)
     mat0, mat1 = binSplitDataSet(dataSet, bestIndex, bestValue)
-    if (shape(mat0)[0] < tolN) or (shape(mat[1])[0] < tolN):
+    if (shape(mat0)[0] < tolN) or (shape(mat1)[0] < tolN):
       return None, leafType(dataSet)  # 如果切分之后的数据数目小于tolN，那么也不继续分裂
     return bestIndex, bestValue
 
@@ -97,10 +95,10 @@ def getMean(tree):
 # 判断的标准是，测试集在当前的表现和合并后的表现
 def prune(tree, testData):
   if shape(testData) == 0:return getMean(tree) #测试集在当前节点分配的个数为０，回收全部节点
-  if isTree[tree['left']] or isTree[tree['right']]:
+  if isTree(tree['left']) or isTree(tree['right']):
     lset, rset = binSplitDataSet(testData, tree['spInd'], tree['spVal'])
-  if isTree(tree['left']):prune(tree['left'], lset)
-  if isTree(tree['right']):prune(tree['right'], lset)
+  if isTree(tree['left']):tree['left'] = prune(tree['left'], lset)
+  if isTree(tree['right']):tree['right'] = prune(tree['right'], rset)
   if not isTree(tree['left']) and not isTree(tree['right']):
     lset, rset = binSplitDataSet(testData, tree['spInd'], tree['spVal'])
     treeMean = (tree['left'] + tree['right']) / 2.0
@@ -108,6 +106,21 @@ def prune(tree, testData):
     errNoMerge = sum(power(lset[:, -1] - tree['left'], 2)) + sum(power(rset[:, -1] - tree['right'], 2))
     # 判断是否merge，如果merge，就变成叶子节点，返回。如果不merge，就返回当前的树。
     if errNoMerge > errMerge:
+      print "merging"
       return treeMean
     else:return tree
   return tree
+
+myDat = loadDataSet('../machinelearninginaction/Ch09/ex2.txt')
+tree = createTree(myDat)
+print tree
+pruneData = loadDataSet('../machinelearninginaction/Ch09/ex2test.txt')
+
+prunetree = prune(tree,pruneData)
+print "after prunetree"
+print prunetree
+
+
+
+
+
